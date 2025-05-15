@@ -27,7 +27,7 @@ export default class AuthController {
         return response.status(401).json({ message: 'Nama Pengguna/Kata Sandi tidak tepat.' })
       }
     } catch (error) {
-      return response.status(400).json(error)
+      return response.status(error.status).json(error)
     }
   }
 }

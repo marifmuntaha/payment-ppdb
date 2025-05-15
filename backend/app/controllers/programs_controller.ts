@@ -5,7 +5,7 @@ import { storeProgramValidation, updateProgramValidation } from '#validators/pro
 export default class ProgramsController {
   async index({ response }: HttpContext) {
     try {
-      const programs = await Program.all()
+      const programs = await Program.query().preload('institution')
       return response.status(200).json({
         result: programs,
       })

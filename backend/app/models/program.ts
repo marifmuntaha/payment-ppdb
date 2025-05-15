@@ -1,5 +1,7 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column } from '@adonisjs/lucid/orm'
+import { BaseModel, column, hasOne } from '@adonisjs/lucid/orm'
+import Institution from '#models/institution'
+import type { HasOne } from '@adonisjs/lucid/types/relations'
 
 export default class Program extends BaseModel {
   @column({ isPrimary: true })
@@ -16,6 +18,12 @@ export default class Program extends BaseModel {
 
   @column()
   declare description: string | undefined
+
+  @hasOne(() => Institution, {
+    foreignKey: 'id',
+    localKey: 'institutionId',
+  })
+  declare institution: HasOne<typeof Institution>
 
   @column.dateTime({ autoCreate: true })
   declare createdAt: DateTime

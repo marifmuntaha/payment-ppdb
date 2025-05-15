@@ -6,7 +6,7 @@ export default class extends BaseSchema {
   async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id')
-      table.integer('institution_id')
+      table.integer('institution_id').unsigned().references('institutions.id').onDelete('cascade')
       table.string('register_number').notNullable()
       table.string('nik').notNullable().unique()
       table.string('name').notNullable()
@@ -18,7 +18,7 @@ export default class extends BaseSchema {
       table.string('address').notNullable()
       table.string('father_name').notNullable()
       table.string('mother_name').notNullable()
-      table.integer('program').notNullable()
+      table.integer('program_id').notNullable()
       table.enum('boarding', ['1', '2']).notNullable().comment('1. Tahfidz, 2. Kitab')
       table.integer('room').nullable()
       table.enum('cupboard', ['1', '2']).nullable().comment('1. Sudah, 2. Belum').defaultTo('2')

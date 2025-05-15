@@ -3,11 +3,19 @@ import Institution from '#models/institution'
 import { storeInstitutionValidation } from '#validators/institution'
 
 export default class InstitutionsController {
-  async index({ response }: HttpContext) {
+  async index({ request, response }: HttpContext) {
     try {
+      let data
       const institutions = await Institution.all()
+      if (request.input('type') === 'select') {
+        data = institutions.map((item) => {
+          return { value: item.id, label: item.name }
+        })
+      } else {
+        data = institutions
+      }
       return response.status(200).json({
-        result: institutions,
+        result: data,
       })
     } catch (error) {
       return response.status(400).json(error)

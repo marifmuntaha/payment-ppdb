@@ -2,6 +2,8 @@ import type { HttpContext } from '@adonisjs/core/http'
 import axios from 'axios'
 import env from '#start/env'
 import * as crypto from 'node:crypto'
+import Invoice from '#models/invoice'
+import Payment from '#models/payment'
 
 export default class TripaysController {
   async instruction({ params, response }: HttpContext) {
@@ -80,27 +82,27 @@ export default class TripaysController {
 
   async createTransaction({ request, response }: HttpContext) {
     const data = request.body()
+    const invoice = await Invoice.query().preload('student').where('id', data.invoiceId).first()
+    const merchantRef = `INV-${invoice?.student.registerNumber}`
     // @ts-ignore
-    const expiry = Math.floor(new Date() / 1000) + 24 * 60 * 60
+    const expiry = Math.floor(new Date() / 1000) + 7 * 24 * 60 * 60
     const signature = crypto
       .createHmac('sha256', String(env.get('TRIPAY_PRIVATEKEY')))
-      .update(env.get('TRIPAY_MERCHANTCODE') + data.merchant_ref + data.amount)
+      .update(env.get('TRIPAY_MERCHANTCODE') + merchantRef + invoice?.amount)
       .digest('hex')
     const payload = {
       method: data.method,
-      merchant_ref: data.merchant_ref,
-      amount: data.amount,
-      customer_name: data.customer_name,
-      customer_email: data.customer_email,
-      customer_phone: data.customer_phone,
+      merchant_ref: merchantRef,
+      amount: invoice?.amount,
+      customer_name: invoice?.student.name,
+      customer_email: invoice?.student.email,
+      customer_phone: invoice?.student.phone,
       order_items: [
         {
           sku: 'PPDB2526',
           name: 'Biaya Pendaftaran Peserta Didik Baru TP 2025/2026',
-          price: data.amount,
+          price: invoice?.amount,
           quantity: 1,
-          product_url: 'https://tokokamu.com/product/nama-produk-1',
-          image_url: 'https://tokokamu.com/product/nama-produk-1.jpg',
         },
       ],
       expired_time: expiry,
@@ -115,7 +117,9 @@ export default class TripaysController {
           return status < 999
         },
       })
-      .then((resp) => {
+      .then(async (resp) => {
+        const { reference } = resp.data.data
+        await Payment.create({ invoiceId: data.invoiceId, reference: reference })
         return response.status(200).json(resp.data)
       })
       .catch((err) => {
@@ -144,12 +148,27 @@ export default class TripaysController {
 
   async callback({ request, response }: HttpContext) {
     const data = request.body()
-    const signature = crypto
+    crypto
       .createHmac('sha256', String(env.get('TRIPAY_PRIVATEKEY')))
       .update(JSON.stringify(data))
       .digest('hex')
-    console.log(signature)
-    console.log(data)
+    switch (data.status) {
+      case 'UNPAID':
+        const unpaid = await Payment.query().where('reference', data.reference).first()
+        const inv = await Invoice.findOrFail(unpaid?.invoiceId)
+        inv.status = 'BELUM'
+        await inv.save()
+        break
+      case 'PAID':
+        const paid = await Payment.query().where('reference', data.reference).first()
+        const invoice = await Invoice.findOrFail(paid?.invoiceId)
+        invoice.status = 'LUNAS'
+        await invoice.save()
+        break
+      default:
+        const payment = await Payment.query().where('reference', data.reference).first()
+        await payment?.delete()
+    }
     return response.status(200).json({ success: true })
   }
 }

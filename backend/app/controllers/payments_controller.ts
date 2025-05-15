@@ -1,27 +1,27 @@
 import type { HttpContext } from '@adonisjs/core/http'
-import Student from '#models/student'
-import { storeStudentValidation, updateStudentValidation } from '#validators/student'
+import Payment from '#models/payment'
+import { storePaymentValidation, updatePaymentValidation } from '#validators/payment'
 
-export default class StudentsController {
+export default class PaymentsController {
   async index({ response }: HttpContext) {
     try {
-      const students = await Student.all()
+      const payments = await Payment.all()
       return response.status(200).json({
-        result: students,
+        result: payments,
       })
     } catch (error) {
-      return response.status(400).json(error)
+      console.log(error)
     }
   }
 
   async store({ request, response }: HttpContext) {
     try {
       const data = request.body()
-      const payload = await storeStudentValidation.validate(data)
-      const student = await Student.create(payload)
+      const payload = await storePaymentValidation.validate(data)
+      const payment = await Payment.create(payload)
       return response.status(200).json({
-        message: 'Student created',
-        result: student,
+        message: 'Payment created successfully.',
+        result: payment,
       })
     } catch (error) {
       return response.status(400).json(error)
@@ -30,9 +30,9 @@ export default class StudentsController {
 
   async show({ params, response }: HttpContext) {
     try {
-      const student = await Student.findOrFail(params.id)
+      const payment = await Payment.findOrFail(params.id)
       return response.status(200).json({
-        result: student,
+        result: payment,
       })
     } catch (error) {
       return response.status(400).json(error)
@@ -42,16 +42,11 @@ export default class StudentsController {
   async update({ params, request, response }: HttpContext) {
     try {
       const data = request.body()
-      const student = await Student.findOrFail(params.id)
-      const payload = await request.validateUsing(updateStudentValidation, {
-        meta: {
-          studentId: params.id,
-        },
-        data: data,
-      })
-      const update = await student.merge(payload).save()
+      const payload = await updatePaymentValidation.validate(data)
+      const payment = await Payment.findOrFail(params.id)
+      const update = await payment.merge(payload).save()
       return response.status(200).json({
-        message: 'Updated successfully',
+        message: 'Payment updated successfully.',
         result: update,
       })
     } catch (error) {
@@ -61,11 +56,11 @@ export default class StudentsController {
 
   async destroy({ params, response }: HttpContext) {
     try {
-      const student = await Student.findOrFail(params.id)
-      await student.delete()
+      const payment = await Payment.findOrFail(params.id)
+      await payment.delete()
       return response.status(200).json({
-        message: 'Student deleted',
-        result: student,
+        message: 'Payment deleted successfully.',
+        result: payment,
       })
     } catch (error) {
       return response.status(400).json(error)
